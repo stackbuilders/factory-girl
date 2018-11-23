@@ -359,8 +359,8 @@ describe('Factory', function () {
         const spy = sinon.spy(model => model);
         const factoryWithOptions
           = new Factory(DummyModel, simpleObjInit, { afterBuild: spy });
-        const dummyAttrs = {};
-        const dummyBuildOptions = {};
+        const dummyAttrs = [];
+        const dummyBuildOptions = [];
         const models = await factoryWithOptions.buildMany(
           dummyAdapter, 5, dummyAttrs, dummyBuildOptions
         );
@@ -368,6 +368,28 @@ describe('Factory', function () {
         for (let i = 0; i < 5; i++) {
           expect(spy.getCall(i)).to.have.been.calledWith(
             models[i], dummyAttrs, dummyBuildOptions
+          );
+        }
+      })
+    );
+
+    it('invokes afterBuild with a single object if returnArrayToAfter is false',
+      asyncFunction(async function () {
+        const spy = sinon.spy(model => model);
+        const factoryWithOptions
+          = new Factory(DummyModel, simpleObjInit, {
+            afterBuild: spy,
+            returnArrayToAfter: false,
+          });
+        const dummyAttrs = [];
+        const dummyBuildOptions = [];
+        const models = await factoryWithOptions.buildMany(
+          dummyAdapter, 5, dummyAttrs, dummyBuildOptions
+        );
+        expect(spy).to.have.callCount(5);
+        for (let i = 0; i < 5; i++) {
+          expect(spy.getCall(i)).to.have.been.calledWith(
+            models[i], dummyAttrs[i], dummyBuildOptions[i]
           );
         }
       })
@@ -399,8 +421,8 @@ describe('Factory', function () {
 
     it('calls buildMany to build models', asyncFunction(async function () {
       const spy = sinon.spy(objFactory, 'buildMany');
-      const dummyAttrs = {};
-      const dummyBuildOptions = {};
+      const dummyAttrs = [];
+      const dummyBuildOptions = [];
       await objFactory.createMany(
         dummyAdapter, 5, dummyAttrs, dummyBuildOptions
       );
@@ -438,8 +460,14 @@ describe('Factory', function () {
         const spy = sinon.spy(model => model);
         const factoryWithOptions
           = new Factory(DummyModel, simpleObjInit, { afterCreate: spy });
-        const dummyAttrs = {};
-        const dummyBuildOptions = {};
+        const dummyAttrs = [
+          { data: 1 },
+          { data: 2 },
+          { data: 3 },
+          { data: 4 },
+          { data: 5 },
+        ];
+        const dummyBuildOptions = [];
         const models = await factoryWithOptions.createMany(
           dummyAdapter, 5, dummyAttrs, dummyBuildOptions
         );
@@ -447,6 +475,34 @@ describe('Factory', function () {
         for (let i = 0; i < 5; i++) {
           expect(spy.getCall(i)).to.have.been.calledWith(
             models[i], dummyAttrs, dummyBuildOptions
+          );
+        }
+      })
+    );
+
+    it('invokes afterCreate with a single object if returnArrayToAfter is false',
+      asyncFunction(async function () {
+        const spy = sinon.spy(model => model);
+        const factoryWithOptions
+          = new Factory(DummyModel, simpleObjInit, {
+            afterCreate: spy,
+            returnArrayToAfter: false,
+          });
+        const dummyAttrs = [
+          { data: 1 },
+          { data: 2 },
+          { data: 3 },
+          { data: 4 },
+          { data: 5 },
+        ];
+        const dummyBuildOptions = [];
+        const models = await factoryWithOptions.createMany(
+          dummyAdapter, 5, dummyAttrs, dummyBuildOptions
+        );
+        expect(spy).to.have.callCount(5);
+        for (let i = 0; i < 5; i++) {
+          expect(spy.getCall(i)).to.have.been.calledWith(
+            models[i], dummyAttrs[i], dummyBuildOptions[i]
           );
         }
       })

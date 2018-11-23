@@ -4,6 +4,7 @@ export default class Factory {
   name = null;
   Model = null;
   initializer = null;
+  returnArrayToAfter = true;
   options = {};
 
   constructor(Model, initializer, options = {}) {
@@ -15,9 +16,16 @@ export default class Factory {
       throw new Error('Invalid initializer passed to the factory');
     }
 
+    this.getAdditionalOptions(options);
     this.Model = Model;
     this.initializer = initializer;
     this.options = { ...this.options, ...options };
+  }
+
+  getAdditionalOptions(options) {
+    if (typeof options.returnArrayToAfter !== 'undefined') {
+      this.returnArrayToAfter = options.returnArrayToAfter;
+    }
   }
 
   getFactoryAttrs(buildOptions = {}) {
@@ -100,9 +108,22 @@ export default class Factory {
     const models = attrs.map(attr => adapter.build(this.Model, attr));
     return Promise.all(models)
       .then(builtModels => (this.options.afterBuild && buildCallbacks ?
-          Promise.all(builtModels.map(builtModel => this.options.afterBuild(
-            builtModel, attrsArray, buildOptionsArray
-          ))) :
+          Promise.all(builtModels.map(
+            (builtModel, createdIndex) => {
+              if (this.returnArrayToAfter) {
+                return this.options.afterBuild(
+                  builtModel,
+                  attrsArray,
+                  buildOptionsArray
+                );
+              }
+              return this.options.afterBuild(
+                builtModel,
+                attrsArray[createdIndex],
+                buildOptionsArray[createdIndex]
+              );
+            }
+          )) :
           builtModels
       ));
   }
@@ -119,9 +140,22 @@ export default class Factory {
     const savedModels = models.map(model => adapter.save(model, this.Model));
     return Promise.all(savedModels)
       .then(createdModels => (this.options.afterCreate ?
-          Promise.all(createdModels.map(createdModel => this.options.afterCreate(
-            createdModel, attrsArray, buildOptionsArray
-          ))) :
+          Promise.all(createdModels.map(
+            (createdModel, createdIndex) => {
+              if (this.returnArrayToAfter) {
+                return this.options.afterCreate(
+                  createdModel,
+                  attrsArray,
+                  buildOptionsArray
+                );
+              }
+              return this.options.afterCreate(
+                createdModel,
+                attrsArray[createdIndex],
+                buildOptionsArray[createdIndex]
+              );
+            }
+          )) :
           createdModels
       ));
   }
