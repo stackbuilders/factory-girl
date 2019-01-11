@@ -125,4 +125,25 @@ export default class Factory {
           createdModels
       ));
   }
+
+  async createManySequential(adapter, num, attrsArray = [], buildOptionsArray = []) {
+    if (Array.isArray(num)) {
+      buildOptionsArray = attrsArray;
+      attrsArray = num;
+      num = attrsArray.length;
+    }
+    const models = await this.buildMany(
+      adapter, num, attrsArray, buildOptionsArray
+    );
+    const savedModels = models.map(model => adapter.save(model, this.Model));
+    return savedModels.reduce((resolvedSaves, saveOperation) =>
+      resolvedSaves.then(savedObjects => saveOperation
+        .then(createdModel => (
+          this.options.afterCreate ?
+          this.options.afterCreate(createdModel, attrsArray, buildOptionsArray) :
+          createdModel)
+        )
+        .then(createdModel => [...savedObjects, createdModel])),
+      Promise.resolve([]));
+  }
 }

@@ -124,6 +124,19 @@ export default class FactoryGirl {
       ));
   }
 
+  async createManySequential(name, num, attrs, buildOptions = {}) {
+    const adapter = this.getAdapter(name);
+    return this.getFactory(name)
+      .createManySequential(adapter, num, attrs, buildOptions)
+      .then(models => this.addToCreatedList(adapter, models))
+      .then(models => (this.options.afterCreate ?
+          Promise.all(models.map(
+            model => this.options.afterCreate(model, attrs, buildOptions)
+          )) :
+          models
+      ));
+  }
+
   getFactory(name, throwError = true) {
     if (!this.factories[name] && throwError) {
       throw new Error(`Invalid factory '${name}' requested`);

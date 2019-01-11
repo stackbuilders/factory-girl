@@ -612,6 +612,85 @@ describe('FactoryGirl', function () {
     );
   });
 
+  describe('#createManySequential', function () {
+    const factoryGirl = new FactoryGirl();
+    factoryGirl.define('factory1', DummyModel, { name: 'Mark', age: 40 });
+
+    it('requests correct factory and adapter', asyncFunction(async function () {
+      const spy1 = sinon.spy(factoryGirl, 'getFactory');
+      const spy2 = sinon.spy(factoryGirl, 'getAdapter');
+      await factoryGirl.createManySequential('factory1', 2);
+      expect(spy1).to.have.been.calledWith('factory1');
+      expect(spy2).to.have.been.calledWith('factory1');
+      factoryGirl.getFactory.restore();
+      factoryGirl.getAdapter.restore();
+    }));
+
+    it('calls factory#createMany with adapter, num, attrs and buildOptions',
+      asyncFunction(async function () {
+        const factory = factoryGirl.getFactory('factory1');
+        const spy = sinon.spy(factory, 'createManySequential');
+        const dummyAttrs = {};
+        const dummyBuildOptions = {};
+        const adapter = factoryGirl.getAdapter('factory1');
+        await factoryGirl.createManySequential(
+          'factory1', 5, dummyAttrs, dummyBuildOptions
+        );
+        expect(spy).to.have.been.calledWith(
+          adapter, 5, dummyAttrs, dummyBuildOptions
+        );
+        factory.createManySequential.restore();
+      })
+    );
+
+    it('returns a promise', function () {
+      const modelP = factoryGirl.createManySequential('factory1', 2);
+      expect(modelP.then).to.be.a('function');
+      return expect(modelP).to.be.eventually.fulfilled;
+    });
+
+    it('resolves to models array correctly', asyncFunction(async function () {
+      const models = await factoryGirl.createManySequential('factory1', 5);
+      expect(models).to.be.an('array');
+      models.forEach(function (model) {
+        expect(model).to.be.an.instanceof(DummyModel);
+        expect(model.attrs.name).to.be.equal('Mark');
+        expect(model.attrs.age).to.be.equal(40);
+      });
+    }));
+
+    it('invokes afterCreate callback option if any for each model',
+      asyncFunction(async function () {
+        const spy = sinon.spy(model => model);
+        factoryGirl.withOptions({ afterCreate: spy });
+        const dummyAttrs = {};
+        const dummyBuildOptions = {};
+        const models = await factoryGirl.createManySequential(
+          'factory1', 5, dummyAttrs, dummyBuildOptions
+        );
+        expect(spy).to.have.callCount(5);
+        for (let i = 0; i < 5; i++) {
+          expect(spy.getCall(i)).to.have.been.calledWith(
+            models[i], dummyAttrs, dummyBuildOptions
+          );
+        }
+      })
+    );
+
+    it('accepts afterCreate callback returning a promise',
+      asyncFunction(async function () {
+        factoryGirl.withOptions(
+          { afterCreate: model => Promise.resolve(model) }
+        );
+        const models = await factoryGirl.createManySequential('factory1', 5);
+        expect(models).to.be.an('array');
+        models.forEach(function (model) {
+          expect(model).to.be.an.instanceof(DummyModel);
+        });
+      })
+    );
+  });
+
   describe('#withOptions', function () {
 
     it('can replace options', function () {

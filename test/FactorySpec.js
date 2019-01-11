@@ -488,6 +488,104 @@ describe('Factory', function () {
     }));
   });
 
+  describe('#createManySequential', function () {
+    it('returns a promise', function () {
+      const modelsP = objFactory.createManySequential(dummyAdapter, 5);
+      expect(modelsP.then).to.be.a('function');
+      return expect(modelsP).to.be.eventually.fulfilled;
+    });
+
+    it('calls buildMany to build models', asyncFunction(async function () {
+      const spy = sinon.spy(objFactory, 'buildMany');
+      const dummyAttrs = {};
+      const dummyBuildOptions = {};
+      await objFactory.createManySequential(
+        dummyAdapter, 5, dummyAttrs, dummyBuildOptions
+      );
+      expect(spy).to.have.been.calledWith(
+        dummyAdapter, 5, dummyAttrs, dummyBuildOptions
+      );
+      objFactory.buildMany.restore();
+    }));
+
+    it('calls save on adapter with Model and each model',
+      asyncFunction(async function () {
+        const spy = sinon.spy(dummyAdapter, 'save');
+        await objFactory.createManySequential(dummyAdapter, 5);
+        expect(spy).to.have.callCount(5);
+        expect(spy).to.have.been.calledWith(
+          sinon.match(new DummyModel(simpleObjInit)), DummyModel
+        );
+        dummyAdapter.save.restore();
+      })
+    );
+
+    it('resolves to an array of Model instances',
+      asyncFunction(async function () {
+        const models = await objFactory.createManySequential(dummyAdapter, 5);
+        expect(models).to.be.an('array');
+        expect(models).to.have.lengthOf(5);
+        models.forEach(function (model) {
+          expect(model).to.be.an.instanceof(DummyModel);
+        });
+      })
+    );
+
+    it('invokes afterCreate callback option if any for each model',
+      asyncFunction(async function () {
+        const spy = sinon.spy(model => model);
+        const factoryWithOptions
+          = new Factory(DummyModel, simpleObjInit, { afterCreate: spy });
+        const dummyAttrs = {};
+        const dummyBuildOptions = {};
+        const models = await factoryWithOptions.createManySequential(
+          dummyAdapter, 5, dummyAttrs, dummyBuildOptions
+        );
+        expect(spy).to.have.callCount(5);
+        for (let i = 0; i < 5; i++) {
+          expect(spy.getCall(i)).to.have.been.calledWith(
+            models[i], dummyAttrs, dummyBuildOptions
+          );
+        }
+      })
+    );
+
+    it('accepts afterCreate callback returning a promise',
+      asyncFunction(async function () {
+        const factoryWithOptions = new Factory(
+          DummyModel,
+          simpleObjInit,
+          { afterCreate: model => Promise.resolve(model) }
+        );
+
+        const models = await factoryWithOptions.createManySequential(dummyAdapter, 5);
+        expect(models).to.be.an('array');
+        models.forEach(function (model) {
+          expect(model).to.be.an.instanceof(DummyModel);
+        });
+      })
+    );
+
+    it('invokes afterBuild callback on createManySequential',
+      asyncFunction(async function () {
+        const spy = sinon.spy(model => model);
+        const factoryWithOptions
+          = new Factory(DummyModel, simpleObjInit, { afterBuild: spy });
+        await factoryWithOptions.createManySequential(dummyAdapter, 2);
+        expect(spy).to.have.callCount(2);
+      })
+    );
+
+    it('accepts an array of attrs', asyncFunction(async function () {
+      const models = await objFactory.createManySequential(dummyAdapter, [
+        { name: 'One' },
+        { name: 'Two' },
+      ]);
+      expect(models[0].get('name')).to.equal('One');
+      expect(models[1].get('name')).to.equal('Two');
+    }));
+  });
+
   describe('#attrsMany', function () {
     it('validates number of objects', function () {
       const noNumP = objFactory.attrsMany();
